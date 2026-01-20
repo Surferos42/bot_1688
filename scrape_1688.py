@@ -7,7 +7,7 @@ import time
 # Pobieramy webhook z sekretów GitHub
 WEBHOOK = os.getenv("DISCORD_WEBHOOK")
 
-# URL do hot-selling produktów 1688
+# URL hot-selling produktów (sortowanie po sprzedaży)
 URL = "https://s.1688.com/selloffer/offer_search.htm?keywords=%E7%83%AD%E9%94%80&sortType=saleDesc"
 
 def send_to_discord(message):
@@ -25,32 +25,36 @@ def run():
         page = browser.new_page(locale="zh-CN")
         page.goto(URL, timeout=60000)
 
-        # Scrollujemy, żeby załadować produkty
+        # Scrollowanie strony, żeby załadować produkty (lazy loading)
         for _ in range(6):
             page.mouse.wheel(0, 3000)
             time.sleep(2)
 
-        # Pobieramy wszystkie linki
-        for a in page.query_selector_all("a"):
+        # Szukamy produktów w odpowiednich divach
+        for item in page.query_selector_all("div.offer-title"):
             try:
-                text = a.inner_text().replace("\n", " ")
-                href = a.get_attribute("href")
-                if not href:
+                title_el = item.query_selector("a")
+                sale_el = item.query_selector("span.sale-num")
+
+                if not title_el or not sale_el:
                     continue
 
-                # sprawdzamy, czy to produkt z info o sprzedaży
-                if "已售" in text or "成交" in text:
-                    # poprawiamy linki względne
-                    if href.startswith("//"):
-                        href = "https:" + href
-                    elif href.startswith("/"):
-                        href = "https://www.1688.com" + href
+                title_text = title_el.inner_text().strip()
+                sale_text = sale_el.inner_text().strip()
+                href = title_el.get_attribute("href")
 
-                    products.append({
-                        "text": text,
-                        "link": href
-                    })
-            except:
+                # popraw linki względne
+                if href.startswith("//"):
+                    href = "https:" + href
+                elif href.startswith("/"):
+                    href = "https://www.1688.com" + href
+
+                products.append({
+                    "text": f"{title_text} {sale_text}",
+                    "link": href
+                })
+
+            except Exception as e:
                 continue
 
         browser.close()
@@ -60,7 +64,7 @@ def run():
 
     print(f"Znaleziono produktów: {len(top50)}")
 
-    # Budujemy wiadomość Discord
+    # Budujemy wiadomość do Discorda
     date = datetime.now().strftime("%Y-%m-%d")
     message = f"🔥 **1688 TOP 50 — {date}** 🔥\n\n"
 
@@ -72,7 +76,7 @@ def run():
             send_to_discord(message)
             message = ""
 
-    # Wyślij ostatnią wiadomość
+    # Wyślij ostatnią część
     if message:
         send_to_discord(message)
 
