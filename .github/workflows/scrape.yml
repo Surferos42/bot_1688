@@ -1,29 +1,29 @@
-name: 1688 Daily Discord Bot
+name: 1688 bot
 
 on:
+  workflow_dispatch:   # uruchamiasz ręcznie
   schedule:
-    - cron: '0 18 * * *'  # 20:00 PL
-  workflow_dispatch:
+    - cron: "0 */12 * * *"   # co 12h (opcjonalnie)
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.11"
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
-          pip install playwright requests
+          pip install --upgrade pip
+          pip install -r requirements.txt
           playwright install chromium
 
-      - name: Run scraper
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: python scrape_1688.py
-
+      - name: 🕷 Run scraper
+        run: |
+          python scraper.py
