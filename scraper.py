@@ -1,5 +1,5 @@
 from playwright.sync_api import sync_playwright
-from playwright_stealth import stealth
+from playwright_stealth.stealth import stealth
 import time
 import random
 
